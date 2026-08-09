@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Interview Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-a:#0f172a;
+    --bg-b:#020617;
+    --glass:rgba(30,41,59,0.4);
+    --glass-strong:rgba(30,41,59,0.6);
+    --glass-border:rgba(255,255,255,0.05);
+    --glass-border-strong:rgba(255,255,255,0.1);
+    --text:#E7ECF3;
+    --muted:#8B98AC;
+    --emerald:#10b981;
+    --emerald-dim:rgba(16,185,129,0.18);
+    --cyan:#06b6d4;
+    --cyan-dim:rgba(6,182,212,0.18);
+    --amber:#f59e0b;
+    --amber-dim:rgba(245,158,11,0.15);
+    --red:#ef4444;
+    --locked:#3a4457;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background: radial-gradient(circle at center, var(--bg-a), var(--bg-b));
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Plus Jakarta Sans',sans-serif;}
+  ::selection{background:var(--emerald-dim);color:#fff;}
+
+  /* focus visibility for keyboard users */
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--cyan);
+    outline-offset:2px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- Layout shell ---------- */
+  #app{
+    max-width:1080px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  header.top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:22px 28px;
+    border-bottom:1px solid var(--glass-border);
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #5eead4, var(--emerald) 60%, var(--cyan));
+    box-shadow:0 0 14px 2px rgba(16,185,129,0.55), 0 0 26px 6px rgba(6,182,212,0.25);
+  }
+  .brand h1{
+    font-size:16.5px;
+    letter-spacing:0.01em;
+    margin:0;
+    font-weight:700;
+  }
+  .brand .sub{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:3px;
+    letter-spacing:0.04em;
+  }
+  .status-pill{
+    font-size:11px;
+    color:var(--text);
+    background:var(--glass);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);
+    box-shadow:0 4px 30px rgba(0,0,0,0.4);
+    padding:6px 12px;
+    border-radius:20px;
+    letter-spacing:0.03em;
+  }
+
+  /* ---------- Setup screen ---------- */
+  #setup{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px 24px;
+  }
+  .setup-card{
+    width:100%;
+    max-width:460px;
+    background:var(--glass);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);
+    box-shadow:0 4px 30px rgba(0,0,0,0.4);
+    border-radius:20px;
+    padding:34px 32px;
+  }
+  .setup-card .eyebrow{
+    color:var(--cyan);
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    margin-bottom:12px;
+  }
+  .setup-card h2{
+    font-size:28px;
+    line-height:1.25;
+    margin:0 0 12px 0;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .setup-card p.desc{
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.6;
+    margin:0 0 30px 0;
+  }
+  label{
+    display:block;
+    font-size:11px;
+    color:var(--muted);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .field{margin-bottom:18px;}
+  input[type=text], input[type=password]{
+    width:100%;
+    background:rgba(2,6,23,0.5);
+    border:1px solid var(--glass-border-strong);
+    color:var(--text);
+    padding:13px 15px;
+    border-radius:12px;
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input[type=text]:focus, input[type=password]:focus{
+    border-color:var(--cyan);
+    box-shadow:0 0 0 3px var(--cyan-dim), 0 0 18px rgba(6,182,212,0.25);
+  }
+  .key-hint{
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:9px;
+    line-height:1.55;
+  }
+  .key-hint a{color:var(--cyan);text-decoration:none;}
+  .key-hint a:hover{text-decoration:underline;}
+  button.primary{
+    width:100%;
+    background:linear-gradient(135deg, var(--emerald), var(--cyan));
+    color:#04160f;
+    border:none;
+    padding:14px 16px;
+    border-radius:12px;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:8px;
+    box-shadow:0 0 0 rgba(16,185,129,0);
+    transition:box-shadow .2s ease, transform .05s ease, filter .15s ease;
+  }
+  button.primary:hover{filter:brightness(1.06); box-shadow:0 0 26px rgba(16,185,129,0.45), 0 0 46px rgba(6,182,212,0.2);}
+  button.primary:active{transform:translateY(1px);}
+  button.primary:disabled{opacity:0.5;cursor:not-allowed;box-shadow:none;}
+  .error-banner{
+    background:rgba(239,68,68,0.1);
+    border:1px solid rgba(239,68,68,0.35);
+    color:#fca5a5;
+    font-size:12.5px;
+    padding:11px 13px;
+    border-radius:10px;
+    margin-top:14px;
+    display:none;
+    line-height:1.5;
+  }
+
+  /* ---------- Interview screen ---------- */
+  #interview{
+    flex:1;
+    display:none;
+    grid-template-columns:240px 1fr;
+    gap:0;
+    min-height:0;
+  }
+  #interview.active{display:grid;}
+  aside{
+    border-right:1px solid var(--glass-border);
+    background:rgba(15,23,42,0.25);
+    padding:28px 22px;
+  }
+  aside .cand{
+    margin-bottom:30px;
+    padding-bottom:20px;
+    border-bottom:1px solid var(--glass-border);
+  }
+  aside .cand .name{font-size:14.5px;font-weight:700;}
+  aside .cand .role{font-size:12px;color:var(--muted);margin-top:3px;}
+
+  .counter{
+    font-size:11px;
+    color:var(--muted);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-bottom:16px;
+  }
+  .counter .num{color:var(--cyan);font-weight:600;}
+
+  .pipeline{
+    position:relative;
+    padding-left:2px;
+  }
+  .pipeline .node{
+    position:relative;
+    padding:0 0 22px 22px;
+    border-left:2px solid var(--locked);
+  }
+  .pipeline .node:last-child{border-left:2px solid transparent;padding-bottom:0;}
+  .pipeline .node .marker{
+    position:absolute;
+    left:-7px;
+    top:0;
+    width:12px;height:12px;
+    border-radius:50%;
+    background:#1a2131;
+    border:2px solid var(--locked);
+    transition:all .25s ease;
+  }
+  .pipeline .node.covered .marker{
+    background:var(--emerald);
+    border-color:var(--emerald);
+    box-shadow:0 0 10px 2px rgba(16,185,129,0.55);
+  }
+  .pipeline .node.active .marker{
+    background:var(--cyan);
+    border-color:var(--cyan);
+    box-shadow:0 0 0 4px var(--cyan-dim), 0 0 14px 3px rgba(6,182,212,0.6);
+  }
+  .pipeline .node .label{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.45;
+  }
+  .pipeline .node.covered .label{color:var(--text);}
+  .pipeline .node.active .label{color:var(--cyan);font-weight:600;}
+
+  main.chatpane{
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  #log{
+    flex:1;
+    overflow-y:auto;
+    padding:28px 32px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    scroll-behavior:smooth;
+  }
+
+  @keyframes slideInLeft{
+    from{opacity:0; transform:translateX(-14px);}
+    to{opacity:1; transform:translateX(0);}
+  }
+  @keyframes slideInRight{
+    from{opacity:0; transform:translateX(14px);}
+    to{opacity:1; transform:translateX(0);}
+  }
+
+  .msg{
+    max-width:76%;
+    padding:13px 16px;
+    border-radius:14px;
+    font-size:14px;
+    line-height:1.6;
+    white-space:pre-wrap;
+  }
+  .msg.interviewer{
+    align-self:flex-start;
+    background:var(--glass);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);
+    box-shadow:0 4px 30px rgba(0,0,0,0.4);
+    border-top-left-radius:4px;
+    animation:slideInLeft .35s ease;
+  }
+  .msg.candidate{
+    align-self:flex-end;
+    background:rgba(51,65,85,0.55);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid rgba(148,163,184,0.18);
+    box-shadow:0 4px 24px rgba(0,0,0,0.35);
+    border-top-right-radius:4px;
+    animation:slideInRight .3s ease;
+  }
+  .msg .who{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    color:var(--muted);
+    margin-bottom:6px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .typing{
+    align-self:flex-start;
+    font-size:12px;
+    color:var(--muted);
+    padding:6px 16px;
+  }
+  .typing .dots span{
+    display:inline-block;
+    width:5px;height:5px;
+    background:var(--cyan);
+    border-radius:50%;
+    margin-right:3px;
+    box-shadow:0 0 6px rgba(6,182,212,0.7);
+    animation:blink 1.2s infinite ease-in-out;
+  }
+  .typing .dots span:nth-child(2){animation-delay:.15s;}
+  .typing .dots span:nth-child(3){animation-delay:.3s;}
+  @keyframes blink{0%,80%,100%{opacity:0.25;}40%{opacity:1;}}
+
+  form#composer{
+    margin:16px 22px 22px 22px;
+    padding:8px 8px 8px 22px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--glass-strong);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border-strong);
+    box-shadow:0 4px 30px rgba(0,0,0,0.4);
+    border-radius:9999px;
+    transition:box-shadow .2s ease, border-color .2s ease;
+  }
+  form#composer:focus-within{
+    border-color:var(--cyan);
+    box-shadow:0 0 0 3px var(--cyan-dim), 0 4px 30px rgba(0,0,0,0.4);
+  }
+  form#composer textarea{
+    flex:1;
+    resize:none;
+    background:transparent;
+    border:none;
+    color:var(--text);
+    padding:12px 0;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    outline:none;
+    height:44px;
+    line-height:1.4;
+  }
+  form#composer textarea::placeholder{color:var(--muted);}
+  form#composer button{
+    background:linear-gradient(135deg, var(--emerald), var(--cyan));
+    color:#04160f;
+    border:none;
+    border-radius:9999px;
+    padding:0 22px;
+    height:42px;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:box-shadow .2s ease, filter .15s ease;
+  }
+  form#composer button:hover{filter:brightness(1.06); box-shadow:0 0 20px rgba(16,185,129,0.45);}
+  form#composer button:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;}
+
+  /* ---------- Evaluation screen ---------- */
+  #evalpane{
+    padding:34px;
+    overflow-y:auto;
+  }
+  .eval-header{
+    display:flex;
+    align-items:center;
+    gap:26px;
+    margin-bottom:30px;
+    padding-bottom:26px;
+    border-bottom:1px solid var(--glass-border);
+  }
+  .gauge{
+    width:100px;height:100px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+    position:relative;
+    box-shadow:0 0 0 6px rgba(16,185,129,0.08), 0 0 34px 6px rgba(16,185,129,0.35);
+    background:radial-gradient(circle at center, rgba(16,185,129,0.12), transparent 70%);
+  }
+  .gauge svg{position:absolute;top:0;left:0;transform:rotate(-90deg);filter:drop-shadow(0 0 6px rgba(16,185,129,0.5));}
+  .gauge .score-num{
+    font-family:'Plus Jakarta Sans',sans-serif;
+    font-size:28px;
+    font-weight:800;
+    z-index:1;
+  }
+  .eval-header h3{
+    margin:0 0 5px 0;
+    font-size:20px;
+    font-weight:700;
+  }
+  .eval-header p{
+    margin:0;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .eval-section{margin-bottom:22px;}
+  .eval-section h4{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    color:var(--muted);
+    margin:0 0 12px 0;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .eval-section ul{
+    margin:0;padding:0;list-style:none;
+  }
+  .eval-section li{
+    font-size:13.5px;
+    line-height:1.6;
+    padding:10px 14px 10px 40px;
+    position:relative;
+    margin-bottom:8px;
+    background:var(--glass);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);
+    border-radius:10px;
+  }
+  .eval-section.strengths li::before{
+    content:"✓";
+    position:absolute;left:14px;top:9px;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--emerald-dim);
+    color:var(--emerald);
+    font-size:11px;
+    font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 8px rgba(16,185,129,0.4);
+  }
+  .eval-section.improve li{border-left:2px solid var(--amber);}
+  .eval-section.improve li::before{
+    content:"!";
+    position:absolute;left:14px;top:9px;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--amber-dim);
+    color:var(--amber);
+    font-size:11px;
+    font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 8px rgba(245,158,11,0.3);
+  }
+  .eval-section.summary p{
+    font-size:13.5px;
+    line-height:1.7;
+    color:var(--text);
+    background:var(--glass);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);
+    box-shadow:0 4px 30px rgba(0,0,0,0.4);
+    padding:16px 18px;
+    border-radius:14px;
+    margin:0;
+  }
+  .restart-row{margin-top:28px;}
+  button.ghost{
+    background:var(--glass);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border-strong);
+    color:var(--text);
+    padding:11px 18px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    transition:border-color .15s ease, box-shadow .15s ease, color .15s ease;
+  }
+  button.ghost:hover{border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 16px rgba(6,182,212,0.25);}
+
+  @media (max-width:720px){
+    #interview.active{grid-template-columns:1fr;}
+    aside{
+      border-right:none;
+      border-bottom:1px solid var(--glass-border);
+      padding:18px 20px;
+    }
+    .pipeline{display:none;}
+    .msg{max-width:88%;}
+    form#composer{margin:14px 16px 16px 16px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <header class="top">
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <h1 class="display">The Interview Agent</h1>
+        <div class="sub mono">enterprise ai engineering &middot; live mock interview</div>
+      </div>
+    </div>
+    <div class="status-pill mono" id="statusPill">not started</div>
+  </header>
+
+  <!-- SETUP -->
+  <div id="setup">
+    <div class="setup-card">
+      <div class="eyebrow mono">session setup</div>
+      <h2 class="display">Let's run your mock interview.</h2>
+      <p class="desc">Eight questions, adaptive to your answers, spanning RAG, vector databases, prompt engineering, agentic AI, MCP, and deployment. You'll get a structured evaluation at the end.</p>
+
+      <div class="field">
+        <label for="candName">Your name</label>
+        <input type="text" id="candName" placeholder="Jane Doe" />
+      </div>
+      <div class="field">
+        <label for="candRole">Role you're interviewing for</label>
+        <input type="text" id="candRole" placeholder="AI Engineer" />
+      </div>
+      <div class="field">
+        <label for="apiKey">OpenRouter API key</label>
+        <input type="password" id="apiKey" placeholder="sk-or-v1-..." />
+        <div class="key-hint">Runs entirely in your browser and is used only to call the OpenRouter API directly — it's never sent anywhere else. Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Make sure your OpenRouter account has credits (or a free-tier model swapped in below) or requests will fail.</div>
+      </div>
+
+      <button class="primary" id="startBtn">Start interview</button>
+      <div class="error-banner" id="setupError"></div>
+    </div>
+  </div>
+
+  <!-- INTERVIEW -->
+  <div id="interview">
+    <aside>
+      <div class="cand">
+        <div class="name" id="sideName">—</div>
+        <div class="role" id="sideRole">—</div>
+      </div>
+      <div class="counter mono">question <span class="num" id="qNum">0</span>/8</div>
+      <div class="pipeline" id="pipeline"></div>
+    </aside>
+
+    <main class="chatpane">
+      <div id="log"></div>
+      <form id="composer">
+        <textarea id="msgInput" placeholder="Type your answer..." rows="1"></textarea>
+        <button type="submit" id="sendBtn">Send</button>
+      </form>
+      <div id="evalpane" style="display:none;"></div>
+    </main>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const CURRICULUM_TOPICS = [
+    "Retrieval-Augmented Generation (RAG)",
+    "Vector Databases & Indexing Strategies",
+    "Prompt Engineering",
+    "Agentic AI & Multi-Step Reasoning",
+    "Model Context Protocol (MCP)",
+    "Production Deployment & MLOps"
+  ];
+  const MIN_QUESTIONS = 8;
+  const MODEL = "openai/gpt-4o-mini"; // OpenRouter model slug (provider/model)
+  const API_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+  // Randomized scenario contexts. One is picked per session so that two
+  // interviews for the same role never converge on the same framing.
+  const SCENARIO_POOL = [
+    "a healthcare AI startup building a HIPAA-compliant clinical documentation assistant",
+    "a fintech company building a fraud-detection copilot for compliance analysts",
+    "an e-commerce platform building a multilingual product-support agent serving 50M+ daily queries",
+    "a legal-tech company building a contract-review copilot with strict citation requirements",
+    "a manufacturing company building a predictive-maintenance agent that runs partly on edge devices",
+    "a media company building a real-time content-moderation and summarization pipeline",
+    "a logistics company building a supply-chain risk-monitoring agent with real-time data feeds",
+    "an enterprise SaaS company building an internal knowledge-base copilot for 10,000+ employees",
+    "a cybersecurity company building an autonomous incident-triage agent",
+    "an edtech company building a personalized tutoring agent with strict content-safety requirements"
+  ];
+
+  const state = {
+    apiKey: "",
+    candidate: {name:"", role:""},
+    log: [],           // {role:'interviewer'|'candidate', content}
+    questionCount: 0,
+    done: false,
+    scenario: "",       // randomized per-session company context
+    topicOffset: 0       // randomized per-session starting topic index
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  const INTERVIEWER_SYSTEM_PROMPT = (role, topics, qNum, scenario) => `You are Alex Chen, a Staff Engineering Manager at a top-tier enterprise AI
+company, conducting a live technical interview for a candidate applying for
+the role of ${role}. You have interviewed hundreds of engineers and hold an
+extremely high technical bar.
+
+Company context for this interview: the candidate is interviewing at
+${scenario}. Ground every question in this specific context — reference
+its real constraints (scale, compliance, latency, data sensitivity, etc.)
+rather than asking generic, context-free questions.
+
+ROLE LENS — this is the most important instruction. Before writing each
+question, silently ask yourself: "What does a ${role} actually own day to
+day, and what would THIS role specifically be grilled on, as opposed to
+any other role?" Then write the question from that angle. The underlying
+curriculum topic can stay the same across roles, but the angle, the
+verbs, and what "good" looks like must shift noticeably. For example, on
+the SAME topic (say, RAG pipeline design):
+- An Architect / Solutions Architect would be asked about system
+  boundaries, build-vs-buy trade-offs, multi-region replication, failure
+  domains, and long-term maintainability — not implementation syntax.
+- A Backend / ML Engineer would be asked about implementation specifics:
+  chunking code, embedding batch jobs, retrieval latency budgets, index
+  update strategies.
+- A Product Manager would be asked about prioritization trade-offs
+  (accuracy vs. latency vs. cost), how they'd define success metrics, and
+  how they'd scope an MVP.
+- A DevOps / MLOps / Deployment Engineer would be asked about rollout
+  strategy, canary deployments, monitoring for silent quality regressions,
+  and rollback plans.
+- A Security Engineer would be asked about prompt-injection surfaces,
+  data exfiltration risks through retrieval, and access control on
+  retrieved documents.
+- A Data Engineer would be asked about ingestion pipelines, freshness
+  guarantees, and schema drift in the underlying knowledge base.
+If ${role} doesn't map cleanly onto any of these, reason by analogy: infer
+what this role is actually accountable for and calibrate the question to
+that — never fall back to a generic "AI engineer" framing as a default.
+
+Your mandate:
+- You are STRICT, precise, and professional — never sycophantic, never filler.
+- You ask exactly ONE question per turn. Never ask multiple questions at once.
+- You must probe deeply into the following enterprise AI curriculum areas
+  across the course of the interview, covering at least 4 distinct topics:
+  ${topics}
+- Your questions must DYNAMICALLY ADAPT based on the candidate's previous
+  answer. If their last answer was shallow, drill deeper with a sharper
+  follow-up. If it was strong, move to a new topic or raise the difficulty.
+  Never ask a generic question in isolation — always react to what the
+  candidate just said.
+- Never reuse a question, scenario detail, or phrasing you'd typically default
+  to for this topic — treat this as a brand-new, unscripted interview every
+  time, shaped specifically by the company context and role above.
+- Keep each question concise (2-4 sentences), technically specific, and
+  free of unnecessary preamble.
+- This is question ${qNum} of at least ${MIN_QUESTIONS}.
+
+Respond with ONLY the next interview question (a short natural transition
+sentence is fine before it). No JSON, no labels, no meta-commentary.`;
+
+  const EVAL_SYSTEM_PROMPT = (role) => `You are Alex Chen, a Staff Engineering Manager who just finished a
+technical interview for a candidate applying for the role of ${role}.
+Return ONLY a valid JSON object (no markdown, no code fences) with EXACTLY
+this shape:
+{
+  "score": <integer 0-100>,
+  "strengths": [<2-4 short strings citing specifics from the transcript>],
+  "areas_for_improvement": [<1-3 short strings citing specifics from the transcript>],
+  "overall_summary": "<2-4 sentence professional summary>"
+}
+Be fair but exacting. Do not inflate the score for vague or generic answers.`;
+
+  function topicForIndex(i){
+    return CURRICULUM_TOPICS[(i + state.topicOffset) % CURRICULUM_TOPICS.length];
+  }
+
+  function renderPipeline(){
+    const el = $('pipeline');
+    el.innerHTML = "";
+    CURRICULUM_TOPICS.forEach((topic, i)=>{
+      const covered = i < Math.min(state.questionCount, CURRICULUM_TOPICS.length) && (state.questionCount > i);
+      const isActiveTopic = (state.questionCount % CURRICULUM_TOPICS.length) === i && !state.done && state.questionCount < MIN_QUESTIONS;
+      const div = document.createElement('div');
+      let cls = 'node';
+      if (i < (state.questionCount % CURRICULUM_TOPICS.length) || state.questionCount > CURRICULUM_TOPICS.length) cls += ' covered';
+      if (isActiveTopic) cls += ' active';
+      div.className = cls;
+      div.innerHTML = `<div class="marker"></div><div class="label">${topic}</div>`;
+      el.appendChild(div);
+    });
+  }
+
+  function updateCounter(){
+    $('qNum').textContent = Math.min(state.questionCount, MIN_QUESTIONS);
+    renderPipeline();
+  }
+
+  function appendMsg(role, content){
+    const log = $('log');
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    const who = role === 'interviewer' ? 'Interviewer' : 'You';
+    div.innerHTML = `<div class="who">${who}</div>${escapeHtml(content)}`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showTyping(){
+    const log = $('log');
+    const div = document.createElement('div');
+    div.className = 'typing';
+    div.id = 'typingIndicator';
+    div.innerHTML = `<span class="dots"><span></span><span></span><span></span></span>`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+  function hideTyping(){
+    const t = $('typingIndicator');
+    if (t) t.remove();
+  }
+
+  async function callOpenAI(messages, jsonMode){
+    const body = {
+      model: MODEL,
+      messages: messages,
+      temperature: jsonMode ? 0.3 : 1.0,
+      top_p: jsonMode ? 1.0 : 0.95,
+      max_tokens: jsonMode ? 600 : 300
+    };
+    if (jsonMode) body.response_format = {type: "json_object"};
+
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + state.apiKey,
+        "HTTP-Referer": window.location.href,
+        "X-Title": "The Interview Agent"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok){
+      let detail = "";
+      try { const errJson = await res.json(); detail = errJson.error && errJson.error.message ? errJson.error.message : ""; }
+      catch(e){}
+      throw new Error(`OpenRouter API error (${res.status}): ${detail || res.statusText}`);
+    }
+    const data = await res.json();
+    const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!content) throw new Error("Empty response from model.");
+    return content;
+  }
+
+  function buildTranscript(){
+    return state.log.map(t => (t.role === 'interviewer' ? 'Interviewer' : 'Candidate') + ": " + t.content).join("\n");
+  }
+
+  async function generateNextQuestion(){
+    const qNum = state.questionCount + 1;
+    const sys = INTERVIEWER_SYSTEM_PROMPT(state.candidate.role, CURRICULUM_TOPICS.join(", "), qNum, state.scenario);
+    const topicHint = `Suggested focus area for this next question (deviate if following up on the candidate's previous answer is more valuable): ${topicForIndex(state.questionCount)}.`;
+
+    const messages = [{role:"system", content: sys}];
+    state.log.forEach(turn=>{
+      messages.push({role: turn.role === 'interviewer' ? 'assistant' : 'user', content: turn.content});
+    });
+    if (state.log.length === 0){
+      messages.push({role:"user", content:`The candidate ${state.candidate.name} has just joined the interview for the ${state.candidate.role} role at ${state.scenario}. Greet them briefly (mention the company context in one clause) and ask your first technical question, written specifically for this scenario and role — do not ask a generic, boilerplate opening question. ${topicHint}`});
+    } else {
+      messages.push({role:"user", content: topicHint});
+    }
+
+    return await callOpenAI(messages, false);
+  }
+
+  async function generateEvaluation(){
+    const sys = EVAL_SYSTEM_PROMPT(state.candidate.role);
+    const userPrompt = `Candidate name: ${state.candidate.name}\nRole applied for: ${state.candidate.role}\n\nFull interview transcript:\n${buildTranscript()}\n\nProduce the JSON evaluation now.`;
+    const raw = await callOpenAI([{role:"system", content: sys}, {role:"user", content: userPrompt}], true);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch(e){
+      parsed = {
+        score: 60,
+        strengths: ["Participated fully through all required interview questions."],
+        areas_for_improvement: ["Automated evaluation parsing failed; recommend manual transcript review."],
+        overall_summary: `${state.candidate.name} completed the interview, but the automated scoring model returned a malformed response.`
+      };
+    }
+    return parsed;
+  }
+
+  function scoreColor(score){
+    if (score >= 80) return "#10b981";
+    if (score >= 60) return "#f59e0b";
+    return "#ef4444";
+  }
+
+  function renderEvaluation(ev){
+    $('composer').style.display = 'none';
+    const pane = $('evalpane');
+    pane.style.display = 'block';
+
+    const circumference = 2 * Math.PI * 40;
+    const offset = circumference - (ev.score/100) * circumference;
+    const color = scoreColor(ev.score);
+
+    pane.innerHTML = `
+      <div class="eval-header">
+        <div class="gauge">
+          <svg width="92" height="92" viewBox="0 0 92 92">
+            <circle cx="46" cy="46" r="40" fill="none" stroke="#262F3D" stroke-width="7"/>
+            <circle cx="46" cy="46" r="40" fill="none" stroke="${color}" stroke-width="7"
+              stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+          </svg>
+          <div class="score-num" style="color:${color}">${ev.score}</div>
+        </div>
+        <div>
+          <h3 class="display">Evaluation complete</h3>
+          <p>${escapeHtml(state.candidate.name)} &middot; ${escapeHtml(state.candidate.role)}</p>
+        </div>
+      </div>
+
+      <div class="eval-section strengths">
+        <h4>Strengths</h4>
+        <ul>${(ev.strengths||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join("")}</ul>
+      </div>
+
+      <div class="eval-section improve">
+        <h4>Areas for improvement</h4>
+        <ul>${(ev.areas_for_improvement||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join("")}</ul>
+      </div>
+
+      <div class="eval-section summary">
+        <h4>Overall summary</h4>
+        <p>${escapeHtml(ev.overall_summary||"")}</p>
+      </div>
+
+      <div class="restart-row">
+        <button class="ghost" id="restartBtn">Start a new interview</button>
+      </div>
+    `;
+    $('restartBtn').addEventListener('click', ()=> location.reload());
+    $('statusPill').textContent = 'complete';
+  }
+
+  async function handleSend(msgText){
+    if (!msgText.trim()) return;
+
+    appendMsg('candidate', msgText);
+    state.log.push({role:'candidate', content: msgText});
+    $('msgInput').value = "";
+    $('sendBtn').disabled = true;
+    $('msgInput').disabled = true;
+
+    showTyping();
+    try {
+      if (state.questionCount >= MIN_QUESTIONS){
+        $('statusPill').textContent = 'evaluating…';
+        const ev = await generateEvaluation();
+        hideTyping();
+        state.done = true;
+        renderEvaluation(ev);
+        return;
+      }
+
+      const question = await generateNextQuestion();
+      hideTyping();
+      appendMsg('interviewer', question);
+      state.log.push({role:'interviewer', content: question});
+      state.questionCount += 1;
+      updateCounter();
+      $('statusPill').textContent = `question ${Math.min(state.questionCount, MIN_QUESTIONS)}/${MIN_QUESTIONS}`;
+    } catch(err){
+      hideTyping();
+      appendMsg('interviewer', "⚠ " + err.message + "\n\nCheck your API key and connection, then try sending your answer again.");
+    } finally {
+      $('sendBtn').disabled = false;
+      $('msgInput').disabled = false;
+      $('msgInput').focus();
+    }
+  }
+
+  // ---------- Wire up setup screen ----------
+  $('startBtn').addEventListener('click', async ()=>{
+    const name = $('candName').value.trim();
+    const role = $('candRole').value.trim();
+    const key = $('apiKey').value.trim();
+    const errBox = $('setupError');
+    errBox.style.display = 'none';
+
+    if (!name || !role || !key){
+      errBox.textContent = "Please fill in your name, role, and API key to begin.";
+      errBox.style.display = 'block';
+      return;
+    }
+
+    state.candidate = {name, role};
+    state.apiKey = key;
+    state.scenario = SCENARIO_POOL[Math.floor(Math.random() * SCENARIO_POOL.length)];
+    state.topicOffset = Math.floor(Math.random() * CURRICULUM_TOPICS.length);
+
+    $('startBtn').disabled = true;
+    $('startBtn').textContent = "Starting…";
+
+    try {
+      const firstQuestion = await generateNextQuestion();
+      $('setup').style.display = 'none';
+      $('interview').classList.add('active');
+      $('sideName').textContent = name;
+      $('sideRole').textContent = role;
+      updateCounter();
+      appendMsg('interviewer', firstQuestion);
+      state.log.push({role:'interviewer', content: firstQuestion});
+      state.questionCount += 1;
+      updateCounter();
+      $('statusPill').textContent = `question 1/${MIN_QUESTIONS}`;
+      $('msgInput').focus();
+    } catch(err){
+      errBox.textContent = err.message + " — double-check your API key and try again.";
+      errBox.style.display = 'block';
+      $('startBtn').disabled = false;
+      $('startBtn').textContent = "Start interview";
+    }
+  });
+
+  $('composer').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const val = $('msgInput').value;
+    handleSend(val);
+  });
+
+  $('msgInput').addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      $('composer').requestSubmit();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
